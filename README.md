@@ -41,6 +41,7 @@
 
   * 최종 컬럼 수, `sat` 및 `sat_group` 확인
 
+✅ 모든 전처리는 재실행 시 안전하며, 시드(RANDOM_STATE=42)가 통일
 ---
 
 ### 2.2 변수 선택 + RFECV / ElasticNet 파이프라인 (2번 코드)
@@ -68,8 +69,8 @@
   * 5-fold CV + Hold-out 평가
 * **출력**:
 
-  * CV 평균 지표(F1, Accuracy, ROC-AUC)
-  * Hold-out 지표
+  * 5-fold CV + Hold-out 평가
+  * 성능 지표: Accuracy, F1, Precision, Recall, ROC-AUC
   * 최종 성능 표
 
 ---
