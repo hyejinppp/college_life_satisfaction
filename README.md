@@ -139,5 +139,14 @@
 pip install numpy pandas scikit-learn xgboost statsmodels shap matplotlib
 ```
 
-혹시 그걸 만들어 드릴까요?
+### 특이사항: RFECV_RF선택변수 75개중 아래 7가지 변수는 XGB 트리에 사용되지 않았다. 
 
+dance_years
+drink_freq
+drop_out
+edu_doubt
+exp_group_comp
+exp_solo_comp
+housing_culture 
+->XGB가 학습 과정에서 이 7개 변수로는 더 이상 정보 이득(Information Gain)을 얻을 수 없다고 판단
+ 즉, 7개 변수는 XGB가 예측을 위해 “불필요”하다고 판단한 변수
