@@ -29,12 +29,16 @@
 
 * **설명**:
 
-  * 결측치 컬럼 제거
-  * 오타 수정 (`birth_area` 등)
-  * 범주형 변수 원-핫 인코딩 (`drop_first=True`)
-  * 분석 제외 변수 제거
-  * 상관계수 높은 변수 사전 제거
-  * `sat` 변수 생성 후 median 기준 이진화 → `sat_group`
+*결측치 컬럼 제거: 분석에 의미가 없거나 결측치가 많은 변수 삭제 (drop_missing_cols)
+*오타 수정: birth_area의 잘못된 값('g')을 'gangwon'으로 변경
+*범주형 변수 인코딩:
+dance_years → 숫자 매핑 (less2=1, 2to4=2, …)
+기타 범주형 변수 → 원-핫 인코딩 (첫 번째 카테고리 제거, drop_first=True)
+분석 제외 변수 제거: 모델링에서 제외할 변수 삭제 (prof_hi, int_major, enter_year)
+상관계수 높은 변수 사전 삭제: 다중공선성 예방 (lecture_qual, peer_personal, current_area...)
+*타깃 변수 생성:sat = 4개 만족도 변수 평균
+sat_group = 중위수 기준 이진 분류 (1: 상위 만족, 0: 하위 만족)
+
 * **출력**:
 
   * 최종 컬럼 수, `sat` 및 `sat_group` 확인
@@ -47,13 +51,35 @@
 * **설명**:
 
   * ElasticNet (LogisticRegressionCV) / RFECV(LR, DT, RF, XGB) 파이프라인 정의
+  * 훈련 데이터 내부에서만 변수 선택 → 안정적인 변수 탐색
+  * 폴드별 선택 변수 → 교집합(안정적 변수) 추출
+  * 모델 성능: CV(교차검증) & 홀드아웃 평가
   * **중요**: 변수 선택은 X\_train 내부 fold에서만 수행, 정보 누수 없음
   * Outer CV (5-fold) + Fold별 선택 변수 → 안정적 변수 교집합 산출
   * Jaccard 지수 계산 → 변수 선택 안정성 평가
+
+* **세부설명**:
+  
+  * 데이터 분할: train_test_split + Stratified CV
+  * 파이프라인 정의:
+  * ElasticNet: StandardScaler → LogisticRegressionCV (l1_ratios=[.1,.3,.5,.7,.9])
+  * RFECV: Base estimator → RFECV (feature selection) → 최종 estimator
+  * RFECV: min_features_to_select = 5% of X_train, scoring='f1'
+  * n_jobs=-1 (병렬), 중첩 CV 고려
+
+   * 폴드별 변수 선택: 각 outer CV fold에서 학습 후 선택 변수 추출
+   * 교집합 → 안정적 변수
+   * Jaccard 안정성 지수 계산: 각 fold 선택 변수 간 유사도 평균 → 변수 선택 안정성 평가
+   
+   * 모델 성능 평가:CV 평균 및 표준편차,Hold-out 테스트셋 성능 (accuracy, f1, precision, recall, roc_auc)
+   *
+   * 최종 선택 변수 확인:RFECV: support_ 사용, ElasticNet: 비영(0) 계수 변수 사용
+   * 
 * **출력**:
 
   * 폴드별 선택 변수 수
   * 안정적 변수 (교집합)
+  * Jaccard안정성지수
   * 최종 파이프라인에서 선택된 변수
 
 ---
@@ -63,8 +89,10 @@
 * **설명**:
 
   * RFECV / ElasticNet 선택 후 교집합 안정적 변수 사용
-  * LogisticRegression, DecisionTree, RandomForest, XGB 적용
-  * 5-fold CV + Hold-out 평가
+  * LogisticRegression, DecisionTree, RandomForest, XGBoost->LogisticRegression만 StandardScaler 적용
+  * 5-Fold CV: 안정적 변수 기반 교차검증
+  * Hold-out 평가: X_test에 대해 accuracy, balanced accuracy, F1, precision, recall, ROC-AUC, MCC 계산
+    
 * **출력**:
 
   * 5-fold CV + Hold-out 평가
